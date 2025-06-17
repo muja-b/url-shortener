@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Home - URL Shortener{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background: linear-gradient(120deg, #0f2027, #2c5364, #00c6ff 100%);
+        min-height: 100vh;
+        font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+    }
+    .futuristic-card {
+        background: rgba(30, 41, 59, 0.85);
+        border-radius: 24px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.18);
+        padding: 2.5rem 2rem 2rem 2rem;
+        margin-top: 3rem;
+    }
+    .futuristic-title {
+        color: #fff;
+        letter-spacing: 2px;
+        font-weight: 700;
+        text-shadow: 0 0 8px #00c6ff, 0 0 2px #fff;
+    }
+    .futuristic-label {
+        color: #b2f7ef;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    .futuristic-input {
+        background: rgba(255,255,255,0.08);
+        border: 1.5px solid #00c6ff;
+        color: #fff;
+        border-radius: 18px;
+        padding: 0.75rem 1.25rem;
+        font-size: 1.1rem;
+        transition: border 0.2s;
+        box-shadow: 0 0 8px #00c6ff33;
+    }
+    .futuristic-input:focus {
+        border: 2px solid #00c6ff;
+        outline: none;
+        background: rgba(0,198,255,0.08);
+    }
+    .futuristic-btn {
+        background: linear-gradient(90deg, #00c6ff, #0072ff);
+        color: #fff;
+        border: none;
+        border-radius: 18px;
+        padding: 0.6rem 1.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        box-shadow: 0 0 12px #00c6ff99;
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+        margin-left: 0.5rem;
+    }
+    .futuristic-btn:hover, .futuristic-btn:focus {
+        background: linear-gradient(90deg, #0072ff, #00c6ff);
+        box-shadow: 0 0 24px #00c6ffcc;
+        transform: translateY(-2px) scale(1.04);
+    }
+    .futuristic-pre {
+        background: rgba(0, 198, 255, 0.08);
+        color: #b2f7ef;
+        border-radius: 12px;
+        border: 1px solid #00c6ff44;
+        padding: 1rem;
+        font-size: 1rem;
+        margin-top: 0.5rem;
+        min-height: 2.5rem;
+    }
+</style>
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="futuristic-card">
+            <h2 class="text-center mb-4 futuristic-title">
+                <i class="fas fa-link me-2"></i>URL Shortener API Demo
+            </h2>
+            <!-- Shorten URL -->
+            <form class="mb-4" id="shortenForm" autocomplete="off">
+                <label for="shortenInput" class="futuristic-label">Shorten a URL</label>
+                <div class="input-group">
+                    <input id="shortenInput" class="form-control futuristic-input" placeholder="Enter a URL to shorten..." required>
+                    <button type="submit" class="futuristic-btn">Shorten</button>
+                </div>
+                <pre id="shortenResult" class="futuristic-pre"></pre>
+            </form>
+            <!-- Get All URLs -->
+            <form class="mb-4" id="getAllForm">
+                <label class="futuristic-label">Get All URLs</label><br>
+                <button type="submit" class="futuristic-btn">Get All</button>
+                <pre id="getAllResult" class="futuristic-pre"></pre>
+            </form>
+            <!-- Get Specific URL -->
+            <form class="mb-4" id="getForm" autocomplete="off">
+                <label for="getInput" class="futuristic-label">Get a Shortened URL</label>
+                <div class="input-group">
+                    <input type="text" id="getInput" class="form-control futuristic-input" placeholder="Enter short URL code (e.g. mb1)" required>
+                    <button type="submit" class="futuristic-btn">Get</button>
+                </div>
+                <pre id="getResult" class="futuristic-pre"></pre>
+            </form>
+            <!-- Delete URL -->
+            <form class="mb-2" id="deleteForm" autocomplete="off">
+                <label for="deleteInput" class="futuristic-label">Delete a Shortened URL</label>
+                <div class="input-group">
+                    <input type="text" id="deleteInput" class="form-control futuristic-input" placeholder="Enter short URL code (e.g. mb1)" required>
+                    <button type="submit" class="futuristic-btn">Delete</button>
+                </div>
+                <pre id="deleteResult" class="futuristic-pre"></pre>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('shortenForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const input = document.getElementById('shortenInput').value.trim();
+    if (!input) return;
+    fetch('/api/url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ original_url: input })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('shortenResult').textContent = JSON.stringify(data, null, 2);
+    })
+    .catch(e => {
+        document.getElementById('shortenResult').textContent = 'Error: ' + e.message;
+    });
+});
+
+document.getElementById('getAllForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch('/api/url')
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('getAllResult').textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(e => {
+            document.getElementById('getAllResult').textContent = 'Error: ' + e.message;
+        });
+});
+
+document.getElementById('getForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const code = document.getElementById('getInput').value.trim();
+    if (!code) return;
+    fetch(`/api/url/${code}`)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('getResult').textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(e => {
+            document.getElementById('getResult').textContent = 'Error: ' + e.message;
+        });
+});
+
+document.getElementById('deleteForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const code = document.getElementById('deleteInput').value.trim();
+    if (!code) return;
+    fetch(`/api/url/${code}`, { method: 'DELETE' })
+        .then(r => {
+            if (r.status === 204) {
+                document.getElementById('deleteResult').textContent = 'Deleted successfully';
+            } else {
+                return r.json().then(data => {
+                    document.getElementById('deleteResult').textContent = JSON.stringify(data, null, 2);
+                });
+            }
+        })
+        .catch(e => {
+            document.getElementById('deleteResult').textContent = 'Error: ' + e.message;
+        });
+});
+</script>
+{% endblock %} 
