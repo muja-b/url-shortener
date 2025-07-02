@@ -1,16 +1,14 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 import os
+from db import get_connection
 from url_hash import generate_url_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# Sample data - you can replace this with a database
-urls = [
-    {"id": 1, "original_url": "www.google.com", "short_url": "mb1"},
-    {"id": 2, "original_url": "www.amazon.com", "short_url": "mb2"},
-    {"id": 3, "original_url": "www.cc.com", "short_url": "mb3"},
-]
+# Initialize database connection
+conn = get_connection()
+cur = conn.cursor()
 
 @app.route('/')
 def index():
@@ -22,7 +20,8 @@ def about():
 
 @app.route('/api/url', methods=['GET'])
 def get_urls():
-    return jsonify(urls)
+    cur.execute("SELECT * FROM urls;")
+    return cur.fetchall()
 
 @app.route('/api/url', methods=['POST'])
 def post_url():
@@ -32,28 +31,23 @@ def post_url():
     
     short_url = generate_url_hash(data['original_url'])
     
-    new_url = {
-        "id": len(urls) + 1,
-        "original_url": data['original_url'],
-        "short_url": short_url
-    }
-    urls.append(new_url)
-    return jsonify(new_url), 201
+    cur.execute("INSERT INTO urls (original_url, short_code) VALUES (%s, %s)", (data['original_url'], short_url))
+    conn.commit()
+    return jsonify({"original_url": data['original_url'], "short_url": short_url}), 201
 
 @app.route('/api/url/<string:short_url>', methods=['GET'])
 def get_url(short_url):
-    for url in urls:
-        if url['short_url'] == short_url:
-            return jsonify(url), 200
+    cur.execute("SELECT * FROM urls WHERE short_code = %s", (short_url))
+    url = cur.fetchone()
+    if url:
+        return jsonify(url), 200
     return jsonify({"error": "URL not found"}), 404
 
 @app.route('/api/url/<string:short_url>', methods=['DELETE'])
 def delete_url(short_url):
-    for i, url in enumerate(urls):
-        if url['short_url'] == short_url:
-            deleted_url = urls.pop(i)
-            return jsonify(deleted_url), 204
-    return jsonify({"error": "URL not found"}), 404
+    cur.execute("DELETE FROM urls WHERE short_code = %s", (short_url,))
+    conn.commit()
+    return jsonify({"message": "URL deleted successfully"}), 204
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    app.run(debug=True, host='0.0.0.0', port=5000)
