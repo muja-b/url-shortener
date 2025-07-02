@@ -21,7 +21,7 @@ def about():
 @app.route('/api/url', methods=['GET'])
 def get_urls():
     cur.execute("SELECT * FROM urls;")
-    return cur.fetchall()
+    return jsonify(cur.fetchall())
 
 @app.route('/api/url', methods=['POST'])
 def post_url():
@@ -40,13 +40,17 @@ def get_url(short_url):
     cur.execute("SELECT * FROM urls WHERE short_code = %s", (short_url,))
     url = cur.fetchone()
     if url:
-        return jsonify(url), 200
+        colnames = [desc[0] for desc in cur.description]
+        url_dict = dict(zip(colnames, url))
+        return jsonify(url_dict), 200
     return jsonify({"error": "URL not found"}), 404
 
 @app.route('/api/url/<string:short_url>', methods=['DELETE'])
 def delete_url(short_url):
     cur.execute("DELETE FROM urls WHERE short_code = %s", (short_url,))
     conn.commit()
+    if cur.rowcount == 0:
+        return jsonify({"error": "URL not found"}), 404
     return jsonify({"message": "URL deleted successfully"}), 204
 
 if __name__ == '__main__':
