@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 import os
+from url_hash import generate_url_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -29,10 +30,12 @@ def post_url():
     if not data or 'original_url' not in data:
         return jsonify({"error": "original_url is required"}), 400
     
+    short_url = generate_url_hash(data['original_url'])
+    
     new_url = {
         "id": len(urls) + 1,
         "original_url": data['original_url'],
-        "short_url": "mb" + str(len(urls) + 1)
+        "short_url": short_url
     }
     urls.append(new_url)
     return jsonify(new_url), 201
