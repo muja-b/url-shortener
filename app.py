@@ -37,7 +37,7 @@ def post_url():
 
 @app.route('/api/url/<string:short_url>', methods=['GET'])
 def get_url(short_url):
-    cur.execute("SELECT * FROM urls WHERE short_code = %s", (short_url))
+    cur.execute("SELECT * FROM urls WHERE short_code = %s", (short_url,))
     url = cur.fetchone()
     if url:
         return jsonify(url), 200
