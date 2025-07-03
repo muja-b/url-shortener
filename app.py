@@ -18,11 +18,6 @@ def index():
 def about():
     return render_template('about.html')
 
-@app.route('/api/url', methods=['GET'])
-def get_urls():
-    cur.execute("SELECT * FROM urls;")
-    return jsonify(cur.fetchall())
-
 @app.route('/api/url', methods=['POST'])
 def post_url():
     data = request.get_json()

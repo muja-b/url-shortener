@@ -87,12 +87,6 @@
                 </div>
                 <pre id="shortenResult" class="futuristic-pre"></pre>
             </form>
-            <!-- Get All URLs -->
-            <form class="mb-4" id="getAllForm">
-                <label class="futuristic-label">Get All URLs</label><br>
-                <button type="submit" class="futuristic-btn">Get All</button>
-                <pre id="getAllResult" class="futuristic-pre"></pre>
-            </form>
             <!-- Get Specific URL -->
             <form class="mb-4" id="getForm" autocomplete="off">
                 <label for="getInput" class="futuristic-label">Get a Shortened URL</label>
@@ -134,18 +128,6 @@ document.getElementById('shortenForm').addEventListener('submit', function(e) {
     .catch(e => {
         document.getElementById('shortenResult').textContent = 'Error: ' + e.message;
     });
-});
-
-document.getElementById('getAllForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    fetch('/api/url')
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('getAllResult').textContent = JSON.stringify(data, null, 2);
-        })
-        .catch(e => {
-            document.getElementById('getAllResult').textContent = 'Error: ' + e.message;
-        });
 });
 
 document.getElementById('getForm').addEventListener('submit', function(e) {
