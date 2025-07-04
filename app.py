@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 import os
+
+import psycopg2
 from db import get_connection
 from url_hash import generate_url_hash
 
@@ -25,18 +27,21 @@ def post_url():
         return jsonify({"error": "original_url is required"}), 400
     
     short_url = generate_url_hash(data['original_url'])
-    
-    cur.execute("INSERT INTO urls (original_url, short_code) VALUES (%s, %s)", (data['original_url'], short_url))
-    conn.commit()
-    return jsonify({"original_url": data['original_url'], "short_url": short_url}), 201
+    try:
+        cur.execute("INSERT INTO urls (original_url, short_code) VALUES (%s, %s)", (data['original_url'], short_url))
+        conn.commit()
+        return jsonify({"original_url": data['original_url'], "short_url": short_url}), 201        
+    except psycopg2.IntegrityError:
+        
+        return jsonify({"error": "URL already exists"}), 400
+
 
 @app.route('/api/url/<string:short_url>', methods=['GET'])
 def get_url(short_url):
     cur.execute("SELECT original_url, short_code FROM urls WHERE short_code = %s", (short_url,))
     url = cur.fetchone()
     if url:
-        colnames = [desc[0] for desc in cur.description]
-        url_dict = dict(zip(colnames, url))
+        url_dict = dict(zip(("original_url", "short_code"), url))
         return jsonify(url_dict), 200
     return jsonify({"error": "URL not found"}), 404
 
