@@ -32,8 +32,9 @@ def post_url():
         conn.commit()
         return jsonify({"original_url": data['original_url'], "short_url": short_url}), 201        
     except psycopg2.IntegrityError:
-        
         return jsonify({"error": "URL already exists"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/url/<string:short_url>', methods=['GET'])
