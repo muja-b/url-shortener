@@ -1,16 +1,30 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, g
 import os
 
 import psycopg2
-from db import get_connection
+from db import get_connection, put_connection
 from url_hash import generate_url_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# Initialize database connection
-conn = get_connection()
-cur = conn.cursor()
+@app.before_request
+def before_request():
+    g.db_conn = get_connection()
+    g.db_cur = g.db_conn.cursor()
+
+@app.teardown_request
+def teardown_request(exception):
+    db_conn = getattr(g, 'db_conn', None)
+    db_cur = getattr(g, 'db_cur', None)
+    if db_cur is not None:
+        db_cur.close()
+    if db_conn is not None:
+        if exception:
+            db_conn.rollback()
+        else:
+            db_conn.commit()
+        put_connection(db_conn)
 
 @app.route('/')
 def index():
@@ -28,8 +42,8 @@ def post_url():
     
     short_url = generate_url_hash(data['original_url'])
     try:
-        cur.execute("INSERT INTO urls (original_url, short_code) VALUES (%s, %s)", (data['original_url'], short_url))
-        conn.commit()
+        g.db_cur.execute("INSERT INTO urls (original_url, short_code) VALUES (%s, %s)", (data['original_url'], short_url))
+        g.db_conn.commit()
         return jsonify({"original_url": data['original_url'], "short_url": short_url}), 201        
     except psycopg2.IntegrityError:
         return jsonify({"error": "URL already exists"}), 400
@@ -39,8 +53,8 @@ def post_url():
 
 @app.route('/api/url/<string:short_url>', methods=['GET'])
 def get_url(short_url):
-    cur.execute("SELECT original_url, short_code FROM urls WHERE short_code = %s", (short_url,))
-    url = cur.fetchone()
+    g.db_cur.execute("SELECT original_url, short_code FROM urls WHERE short_code = %s", (short_url,))
+    url = g.db_cur.fetchone()
     if url:
         url_dict = dict(zip(("original_url", "short_code"), url))
         return jsonify(url_dict), 200
@@ -48,9 +62,9 @@ def get_url(short_url):
 
 @app.route('/api/url/<string:short_url>', methods=['DELETE'])
 def delete_url(short_url):
-    cur.execute("DELETE FROM urls WHERE short_code = %s", (short_url,))
-    conn.commit()
-    if cur.rowcount == 0:
+    g.db_cur.execute("DELETE FROM urls WHERE short_code = %s", (short_url,))
+    g.db_conn.commit()
+    if g.db_cur.rowcount == 0:
         return jsonify({"error": "URL not found"}), 404
     return jsonify({"message": "URL deleted successfully"}), 204
 
