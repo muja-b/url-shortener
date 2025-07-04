@@ -4,7 +4,7 @@ import validators
 
 import psycopg2
 from db import get_connection, put_connection
-from url_hash import generate_url_hash
+from url_hash import generate_short_code, generate_sha256_code
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -41,13 +41,30 @@ def post_url():
     if not data or 'original_url' not in data or not validators.url(data['original_url']):
         return jsonify({"error": "original_url is required and must be a valid URL"}), 400
     
-    short_url = generate_url_hash(data['original_url'])
+    short_url = generate_short_code(data['original_url'])
     try:
         g.db_cur.execute("INSERT INTO urls (original_url, short_code) VALUES (%s, %s)", (data['original_url'], short_url))
         g.db_conn.commit()
         return jsonify({"original_url": data['original_url'], "short_url": short_url}), 201        
     except psycopg2.IntegrityError:
-        return jsonify({"error": "URL already exists"}), 400
+        g.db_conn.rollback()
+        g.db_cur.execute("SELECT original_url FROM urls WHERE short_code = %s", (short_url,))
+        existing = g.db_cur.fetchone()
+        if existing and existing[0] == data['original_url']:
+            return jsonify({"original_url": data['original_url'], "short_url": short_url}), 200
+        # Collision: try second hash
+        alt_short_url = generate_sha256_code(data['original_url'])
+        try:
+            g.db_cur.execute("INSERT INTO urls (original_url, short_code) VALUES (%s, %s)", (data['original_url'], alt_short_url))
+            g.db_conn.commit()
+            return jsonify({"original_url": data['original_url'], "short_url": alt_short_url}), 201
+        except psycopg2.IntegrityError:
+            g.db_conn.rollback()
+            g.db_cur.execute("SELECT original_url FROM urls WHERE short_code = %s", (alt_short_url,))
+            existing2 = g.db_cur.fetchone()
+            if existing2 and existing2[0] == data['original_url']:
+                return jsonify({"original_url": data['original_url'], "short_url": alt_short_url}), 200
+            return jsonify({"error": "Hash collision could not be resolved."}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
