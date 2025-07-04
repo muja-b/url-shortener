@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, g
 import os
+import validators
 
 import psycopg2
 from db import get_connection, put_connection
@@ -37,8 +38,8 @@ def about():
 @app.route('/api/url', methods=['POST'])
 def post_url():
     data = request.get_json()
-    if not data or 'original_url' not in data:
-        return jsonify({"error": "original_url is required"}), 400
+    if not data or 'original_url' not in data or not validators.url(data['original_url']):
+        return jsonify({"error": "original_url is required and must be a valid URL"}), 400
     
     short_url = generate_url_hash(data['original_url'])
     try:
