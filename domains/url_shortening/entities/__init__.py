@@ -1,0 +1,1 @@
+# Entities for URL shortening domain 

@@ -1,0 +1,1 @@
+# Infrastructure layer - external concerns like database, web, etc. 
