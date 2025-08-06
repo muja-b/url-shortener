@@ -1,6 +1,6 @@
 import hashlib
 import psycopg2
-from typing import Tuple
+from typing import Optional, Tuple
 from .hash_service import HashService
 from .url_repository import UrlRepository
 
@@ -27,10 +27,11 @@ class UrlService:
         # All hash functions failed
         raise ValueError("Hash collision could not be resolved")
     
-    def get_original_url(self, short_code: str) -> str:
-        """Get the original URL for a short code."""
-        return self.repository.get_original_url(short_code)
+    def get_original_url(self, short_code: str) -> Optional[str]:
+        """Retrieve a shortened URL by its short code."""
+        shortened_url = self.repository.find_by_short_code(short_code)
+        return str(shortened_url.original_url) if shortened_url else None
     
     def delete_url(self, short_code: str) -> bool:
         """Delete a URL by its short code. Returns True if deleted."""
-        return self.repository.delete_url(short_code) 
+        return self.repository.delete_by_short_code(short_code) 
